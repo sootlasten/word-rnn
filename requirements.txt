@@ -1,0 +1,7 @@
+funcsigs==1.0.2
+mock==2.0.0
+numpy==1.11.3
+pbr==1.10.0
+protobuf==3.1.0.post1
+six==1.10.0
+tensorflow==0.12.1
