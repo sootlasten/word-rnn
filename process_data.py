@@ -9,7 +9,7 @@ DATA_FOLDER = 'data'
 DATA_FILE = 'input.txt'
 
 FILENAME = os.path.join(DATA_FOLDER, DATA_FILE)
-vocab_size = 50000
+vocab_size = 20000
 
 
 def _read_words():
@@ -49,6 +49,7 @@ def _build_dataset():
     return data, count, dictionary, reverse_dictionary
 
 data, count, dict, reverse_dict = _build_dataset()
+data = data[:10000]
 
 
 def gen_batches(data, batch_size, seq_length):
@@ -72,10 +73,18 @@ def gen_batches(data, batch_size, seq_length):
     batch 2."""
     # if data doesn't fit evenly into the batches, then cut off the end
     words_in_batch = batch_size * seq_length
-    end_idx = words_in_batch * (len(data) / words_in_batch)
+    end_idx = words_in_batch * (len(data) // words_in_batch)
+
+    # end_idx must be at least the size of the batch, since data should contain
+    # at least one batch
+    assert end_idx >= words_in_batch
+
+    # the size of the dataset must be at least 1 bigger than the end index,
+    # because y values are shifted to the right by one
+    assert len(data) > end_idx
 
     x = np.array(data[:end_idx]).reshape(batch_size, -1)
-    y_list = data[1: end_idx]; y_list.append(data[0])  # last element is wrong!
+    y_list = data[1: end_idx + 1]
     y = np.array(y_list).reshape((batch_size, -1))
 
     x_batches = np.split(x, x.shape[1] / seq_length, 1)

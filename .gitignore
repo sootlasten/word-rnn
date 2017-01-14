@@ -2,3 +2,4 @@
 *.pickle
 .idea/
 blog/*
+ckpts/

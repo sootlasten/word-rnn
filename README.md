@@ -5,3 +5,6 @@ An implementation of a lstm model inspired by [Zaremba et al., 2014](https://arx
 
 The motivation for creating the model is to compare the performance of my [character-level language model](https://github.com/sootlasten/char-rnn) 
 to a model that models language at a world-level.
+
+# TODO!
+# softmax
