@@ -7,4 +7,4 @@ The motivation for creating the model is to compare the performance of my [chara
 to a model that models language at a world-level.
 
 # TODO!
-# softmax
+1. dropout

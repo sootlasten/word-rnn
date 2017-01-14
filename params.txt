@@ -1,0 +1,9 @@
+n_h_layers=2
+n_h_units=128
+batch_size=2
+seq_length=5
+n_epochs=5
+eta=2e-3
+grad_clip=5
+train_frac=0.8
+cell_type=LSTM

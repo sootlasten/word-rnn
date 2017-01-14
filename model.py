@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import os
 import time
 import cPickle as pickle
 
@@ -9,7 +10,8 @@ import numpy as np
 import process_data
 from process_data import vocab_size
 
-MODEL_PARAMS_PATH = "ckpts/model.ckpt"
+CKPT_FILENAME = "model.ckpt"
+INFO_FILENAME = "info.pickle"
 
 
 class Network():
@@ -18,15 +20,14 @@ class Network():
         # network parameters
         self.n_h_layers = n_h_layers
         self.n_h_units = n_h_units
-
         self.seq_length = seq_length
+        self.cell_type = cell_type
 
         self.x, self.final_state, self.init_state, self.preds, \
-        self.logits, self.saver = self._build_network(cell_type)
+        self.logits, self.saver = self._build_network()
 
-        print(Network._model_params_size())
-
-    def sample(self, n, prime_text):
+    def sample(self, n, prime_text, vocab_size, vocab_dict,
+               reverse_vocab_dict, checkpoint_dir):
         """Sample from the model."""
         def get_words_ids(text):
             """Get words from prime text and convert them to word ids."""
@@ -34,18 +35,19 @@ class Network():
 
             word_ids = []
             for word in words:
-                default = process_data.dict['<UNK>']  # if input word is unknown
-                id = process_data.dict.get(word, default)
+                default = vocab_dict['<UNK>']  # if input word is unknown
+                id = vocab_dict.get(word, default)
                 word_ids.append(id)
 
             return word_ids
 
         with tf.Session() as sess:
-            self.saver.restore(sess, MODEL_PARAMS_PATH)  # restore model params
+            params_path = os.path.join(checkpoint_dir, CKPT_FILENAME)
+            self.saver.restore(sess, params_path)  # restore model params
 
             # SAMPLE ...
             if not prime_text:  # if no prime text, choose a random word
-                prime_text = process_data.dict.keys()[np.random.randint(vocab_size)]
+                prime_text = vocab_dict.keys()[np.random.randint(vocab_size)]
 
             prime_text_ids = get_words_ids(prime_text)
 
@@ -74,10 +76,16 @@ class Network():
                 gen_text_ids.append(pred_id)
 
             # ids to text
-            words = [process_data.reverse_dict[id] for id in gen_text_ids]
+            words = [reverse_vocab_dict[id] for id in gen_text_ids]
             return " ".join(map(str, words))
 
-    def train(self, batch_size, eta, grad_clip, n_epochs, train_frac):
+    def train(self, batch_size, eta, grad_clip, n_epochs, train_frac, checkpoint_dir):
+        self._print_model_info(batch_size, eta, grad_clip, n_epochs, train_frac)
+
+        # save model info (num hidden layers etc.) to a file
+        info_path = os.path.join(checkpoint_dir, INFO_FILENAME)
+        self._save_info(info_path)
+
         # build graph for training ...
         y = tf.placeholder(tf.int32, [None, self.seq_length], name='target')
         y_reshaped = tf.reshape(y, [-1])  # flatten into 1-D
@@ -98,11 +106,12 @@ class Network():
             # do the actual training
             tr_data, val_data = process_data.split_data(train_frac)
             best_val_err, best_epoch_n = float('inf'), 0
-            print(len(tr_data))
+
+            print("train data size:         %d" % len(tr_data))
+            print("val data size:           %d\n" % len(val_data))
 
             print("Training...")
             for epoch_n in xrange(1, n_epochs + 1):
-                print("epoch ", epoch_n)
                 start_time = time.time()
 
                 # full pass over the TRAINING SET
@@ -145,7 +154,8 @@ class Network():
                     best_epoch_n = epoch_n
 
                     # save network parameters
-                    self.saver.save(sess, MODEL_PARAMS_PATH)
+                    ckpt_path = os.path.join(checkpoint_dir, CKPT_FILENAME)
+                    self.saver.save(sess, ckpt_path)
 
                 print("Epoch %d completed in %d seconds" % (epoch_n, time.time() - start_time))
                 print("Training loss:       %f" % total_tr_err)
@@ -153,7 +163,7 @@ class Network():
                 print("Best epoch:          %d" % best_epoch_n)
                 print("Best val loss:       %f\n" % best_val_err)
 
-    def _build_network(self, cell_type):
+    def _build_network(self):
         """Input shape should be (batch_size, seq_length, 1)."""
         x = tf.placeholder(tf.int32, [None, self.seq_length], name='input')
 
@@ -161,9 +171,9 @@ class Network():
         rnn_input = tf.nn.embedding_lookup(embeddings, x)
 
         # choose cell type
-        if cell_type == 'GRU':
+        if self.cell_type == 'GRU':
             cell = tf.nn.rnn_cell.GRUCell(self.n_h_units)
-        elif cell_type == 'LSTM':
+        elif self.cell_type == 'LSTM':
             cell = tf.nn.rnn_cell.LSTMCell(self.n_h_units)
         else:
             cell = tf.nn.rnn_cell.BasicRNNCell(self.n_h_units)
@@ -195,6 +205,7 @@ class Network():
         param_dict = {
             'n_h_layers': self.n_h_layers,
             'n_h_units': self.n_h_units,
+            'cell_type': self.cell_type,
             'vocab_size': process_data.vocab_size,
             'vocab_dict': process_data.dict,
             'reverse_vocab_dict': process_data.reverse_dict}
@@ -224,7 +235,8 @@ class Network():
         print("train_frac:              {:.2f}\n".format(train_frac))
 
         print("data_size:               %d" % len(process_data.data))
-        print("# of trainabe params:    %d\n" % Network._model_params_size())
+        print("# of trainabe params:    %d" % Network._model_params_size())
+        print("# of examples in batch:  %d\n" % (self.seq_length * batch_size))
 
 
 if __name__ == '__main__':
@@ -234,9 +246,10 @@ if __name__ == '__main__':
         seq_length=100,
         cell_type='GRU')
 
-    # net.train(
-    #     batch_size=30,
-    #     eta=2e-2,
-    #     grad_clip=5,
-    #     n_epochs=1000000000000,
-    #     train_frac=0.8)
+    net.train(
+        batch_size=30,
+        eta=2e-2,
+        grad_clip=5,
+        n_epochs=1000000000000,
+        train_frac=0.8,
+        checkpoint_dir='ckpts')
