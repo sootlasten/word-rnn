@@ -9,7 +9,6 @@ DATA_FOLDER = 'data'
 DATA_FILE = 'input.txt'
 
 FILENAME = os.path.join(DATA_FOLDER, DATA_FILE)
-vocab_size = 20000
 
 
 def _read_words():
