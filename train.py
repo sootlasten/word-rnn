@@ -34,7 +34,8 @@ net = Network(
     n_h_layers=p_dict.get('n_h_layers', 2),
     n_h_units=p_dict.get('n_h_units', 100),
     seq_length=p_dict.get('seq_length', 25),
-    cell_type=p_dict.get('cell_type', 'LSTM'))
+    cell_type=p_dict.get('cell_type', 'LSTM'),
+    max_vocab_size=p_dict.get('max_vocab_size', 20000))
 
 net.train(
     batch_size=p_dict.get('batch_size', 40),

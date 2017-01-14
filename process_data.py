@@ -9,7 +9,7 @@ DATA_FOLDER = 'data'
 DATA_FILE = 'input.txt'
 
 FILENAME = os.path.join(DATA_FOLDER, DATA_FILE)
-vocab_size = 200
+vocab_size = 20000
 
 
 def _read_words():
@@ -17,14 +17,15 @@ def _read_words():
         return f.read().decode('utf-8').replace('\n', ' <EOS> ').split()
 
 
-def _build_dataset():
+def build_dataset(max_vocab_size):
     words = _read_words()
 
     counter = collections.Counter(words)
 
-    global vocab_size
-    if len(counter) < vocab_size:
+    if len(counter) < max_vocab_size:
         vocab_size = len(counter)
+    else:
+        vocab_size = max_vocab_size
 
     count = [['<UNK>', -1]]
     count.extend(counter.most_common(vocab_size - 1))
@@ -46,9 +47,7 @@ def _build_dataset():
     count[0][1] = unk_count
     reverse_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
 
-    return data, count, dictionary, reverse_dictionary
-
-data, count, dict, reverse_dict = _build_dataset()
+    return data, count, dictionary, reverse_dictionary, vocab_size
 
 
 def gen_batches(data, batch_size, seq_length):
@@ -89,7 +88,7 @@ def gen_batches(data, batch_size, seq_length):
         yield x, y
 
 
-def split_data(tf):
+def split_data(data, tf):
     """Splits data into train and val set. 'tf' is the fraction of train data."""
     assert 0 < tf <= 1
 

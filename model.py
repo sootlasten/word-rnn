@@ -8,7 +8,6 @@ import tensorflow as tf
 import numpy as np
 
 import process_data
-from process_data import vocab_size
 
 CKPT_FILENAME = "model.ckpt"
 INFO_FILENAME = "info.pickle"
@@ -16,12 +15,17 @@ INFO_FILENAME = "info.pickle"
 
 class Network():
 
-    def __init__(self, n_h_layers, n_h_units, seq_length, cell_type):
+    def __init__(self, n_h_layers, n_h_units, seq_length,
+                 cell_type, max_vocab_size):
         # network parameters
         self.n_h_layers = n_h_layers
         self.n_h_units = n_h_units
         self.seq_length = seq_length
         self.cell_type = cell_type
+
+        # data preprocessing
+        self.data, _, self.vocab_dict, self.reverse_vocab_dict, self.vocab_size = \
+            process_data.build_dataset(max_vocab_size)
 
         self.x, self.final_state, self.init_state, self.preds, \
         self.logits, self.saver = self._build_network()
@@ -104,7 +108,7 @@ class Network():
             sess.run(tf.global_variables_initializer())
 
             # do the actual training
-            tr_data, val_data = process_data.split_data(train_frac)
+            tr_data, val_data = process_data.split_data(self.data, train_frac)
             best_val_err, best_epoch_n = float('inf'), 0
 
             print("train data size:         %d" % len(tr_data))
@@ -167,7 +171,8 @@ class Network():
         """Input shape should be (batch_size, seq_length, 1)."""
         x = tf.placeholder(tf.int32, [None, self.seq_length], name='input')
 
-        embeddings = tf.get_variable('embedding_matrix', [vocab_size, self.n_h_units])
+        embeddings = tf.get_variable('embedding_matrix',
+                                     [self.vocab_size, self.n_h_units])
         rnn_input = tf.nn.embedding_lookup(embeddings, x)
 
         # choose cell type
@@ -186,8 +191,9 @@ class Network():
         rnn_out, final_state = tf.nn.dynamic_rnn(cell, rnn_input, initial_state=init_state)
 
         with tf.variable_scope('softmax'):
-            w_out = tf.get_variable('W_out', [self.n_h_units, vocab_size])
-            b = tf.get_variable('b', [vocab_size], initializer=tf.constant_initializer(0.0))
+            w_out = tf.get_variable('W_out', [self.n_h_units, self.vocab_size])
+            b = tf.get_variable('b', [self.vocab_size],
+                                initializer=tf.constant_initializer(0.0))
 
         # reshape
         rnn_out = tf.reshape(rnn_out, [-1, self.n_h_units])
@@ -206,9 +212,9 @@ class Network():
             'n_h_layers': self.n_h_layers,
             'n_h_units': self.n_h_units,
             'cell_type': self.cell_type,
-            'vocab_size': process_data.vocab_size,
-            'vocab_dict': process_data.dict,
-            'reverse_vocab_dict': process_data.reverse_dict}
+            'vocab_size': self.vocab_size,
+            'vocab_dict': self.vocab_dict,
+            'reverse_vocab_dict': self.reverse_vocab_dict}
 
         with open(file_path, 'wb') as f:
             pickle.dump(param_dict, f)
@@ -226,7 +232,7 @@ class Network():
         print("n_h_units:               %d" % self.n_h_units)
         print("batch_size:              %d" % batch_size)
         print("seq_length:              %d" % self.seq_length)
-        print("vocab_size:              %d\n" % process_data.vocab_size)
+        print("vocab_size:              %d\n" % self.vocab_size)
 
         # print("drop_p:                  {:.3f}".format(self.drop_p))
         print("grad_clip:               %d" % grad_clip)
@@ -234,7 +240,7 @@ class Network():
         print("n_epochs:                %d" % n_epochs)
         print("train_frac:              {:.2f}\n".format(train_frac))
 
-        print("data_size:               %d" % len(process_data.data))
+        print("data_size:               %d" % len(self.data))
         print("# of trainabe params:    %d" % Network._model_params_size())
         print("# of examples in batch:  %d\n" % (self.seq_length * batch_size))
 
