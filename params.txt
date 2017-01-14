@@ -5,6 +5,7 @@ seq_length=5
 n_epochs=5
 eta=2e-3
 grad_clip=5
+keep_prob=0.8
 train_frac=0.8
 cell_type=LSTM
 vocab_size=1000

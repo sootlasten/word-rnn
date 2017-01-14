@@ -41,6 +41,7 @@ net.train(
     batch_size=p_dict.get('batch_size', 40),
     eta=p_dict.get('eta', 0.001),
     grad_clip=p_dict.get('grad_clip', 5),
+    keep_prob=p_dict.get('keep_prob', 0.8),
     n_epochs=p_dict.get('n_epochs', 10),
     train_frac=p_dict.get('train_frac', 0.95),
     checkpoint_dir=args.ckpts_dir)

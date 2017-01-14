@@ -1,5 +1,5 @@
 *.pyc
 *.pickle
 .idea/
-blog/*
+sample.txt
 ckpts/

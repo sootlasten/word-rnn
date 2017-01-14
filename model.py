@@ -24,8 +24,8 @@ class Network():
         self.cell_type = cell_type
         self.vocab_size = vocab_size
 
-        self.x, self.final_state, self.init_state, self.preds, \
-        self.logits, self.saver = self._build_network()
+        self.x, self.keep_prob, self.final_state, self.init_state, \
+        self.preds, self.logits, self.saver = self._build_network()
 
     def sample(self, n, prime_text, vocab_dict, reverse_vocab_dict, checkpoint_dir):
         """Sample from the model."""
@@ -56,7 +56,7 @@ class Network():
             for word_id in prime_text_ids:
                 word_id = np.array(word_id).reshape((1, 1))  # convert int to numpy array
 
-                feed_dict = {self.x: word_id}
+                feed_dict = {self.x: word_id, self.keep_prob: 1.0}
                 if prev_state: feed_dict[self.init_state] = prev_state
 
                 pred, prev_state = sess.run([self.preds, self.final_state], feed_dict)
@@ -69,7 +69,8 @@ class Network():
             for _ in xrange(n):
                 pred_id_arr = np.array(pred_id).reshape((1, 1))
 
-                feed_dict = {self.x: pred_id_arr, self.init_state: prev_state}
+                feed_dict = {self.x: pred_id_arr, self.keep_prob: 1.0,
+                             self.init_state: prev_state}
                 pred, prev_state = sess.run([self.preds, self.final_state], feed_dict)
 
                 pred_id = np.argmax(pred)
@@ -79,12 +80,14 @@ class Network():
             words = [reverse_vocab_dict[id] for id in gen_text_ids]
             return " ".join(map(str, words))
 
-    def train(self, batch_size, eta, grad_clip, n_epochs, train_frac, checkpoint_dir):
+    def train(self, batch_size, eta, grad_clip, keep_prob, n_epochs,
+              train_frac, checkpoint_dir):
         # data preprocessing
         data, _, vocab_dict, reverse_vocab_dict = \
             process_data.build_dataset(self.vocab_size)
 
-        self._print_model_info(batch_size, eta, grad_clip, n_epochs, train_frac, len(data))
+        self._print_model_info(batch_size, eta, grad_clip, keep_prob,
+                               n_epochs, train_frac, len(data))
 
         # save model info (num hidden layers etc.) to a file
         info_path = os.path.join(checkpoint_dir, INFO_FILENAME)
@@ -125,7 +128,7 @@ class Network():
                 prev_state = None
                 total_tr_err = 0
                 for tr_batches_n, (x_tr, y_tr) in enumerate(gen_tr_batch, 1):
-                    feed_dict = {self.x: x_tr, y: y_tr}
+                    feed_dict = {self.x: x_tr, y: y_tr, self.keep_prob: keep_prob}
                     if prev_state:
                         feed_dict[self.init_state] = prev_state
 
@@ -141,7 +144,7 @@ class Network():
                 total_val_err = 0
 
                 for val_batches_n, (x_val, y_val) in enumerate(gen_val_batch, 1):
-                    feed_dict = {self.x: x_val, y: y_val}
+                    feed_dict = {self.x: x_val, y: y_val, self.keep_prob: 1.0}
                     if prev_state:
                         feed_dict[self.init_state] = prev_state
 
@@ -183,6 +186,10 @@ class Network():
         else:
             cell = tf.nn.rnn_cell.BasicRNNCell(self.n_h_units)
 
+        # dropout between layers
+        keep_prob = tf.placeholder(tf.float32)
+        cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=keep_prob)
+
         # stack multiple cells on top of each other
         cell = tf.nn.rnn_cell.MultiRNNCell([cell] * self.n_h_layers)
 
@@ -204,7 +211,7 @@ class Network():
         # add ops to save and restore all the variables
         saver = tf.train.Saver()
 
-        return x, final_state, init_state, preds, logits, saver
+        return x, keep_prob, final_state, init_state, preds, logits, saver
 
     def _save_info(self, file_path, vocab_dict, reverse_vocab_dict):
         """Save info about model hyperparameters and training data stuff."""
@@ -225,7 +232,7 @@ class Network():
         return np.sum([np.prod(var._variable._shape)
                        for var in tf.trainable_variables()])
 
-    def _print_model_info(self, batch_size, eta, grad_clip,
+    def _print_model_info(self, batch_size, eta, grad_clip, keep_prob,
                           n_epochs, train_frac, data_size):
         print("Model hyperparams and info:")
         print("---------------------------")
@@ -237,6 +244,7 @@ class Network():
 
         # print("drop_p:                  {:.3f}".format(self.drop_p))
         print("grad_clip:               %d" % grad_clip)
+        print("keep_prob:               {:.3f}".format(keep_prob))
         print("eta:                     {:.6f}".format(eta))
         print("n_epochs:                %d" % n_epochs)
         print("train_frac:              {:.2f}\n".format(train_frac))
