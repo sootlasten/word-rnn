@@ -16,15 +16,12 @@ def _read_words():
         return f.read().decode('utf-8').replace('\n', ' <EOS> ').split()
 
 
-def build_dataset(max_vocab_size):
+def build_dataset(vocab_size):
     words = _read_words()
 
     counter = collections.Counter(words)
 
-    if len(counter) < max_vocab_size:
-        vocab_size = len(counter)
-    else:
-        vocab_size = max_vocab_size
+    assert len(counter) >= vocab_size
 
     count = [['<UNK>', -1]]
     count.extend(counter.most_common(vocab_size - 1))
@@ -46,7 +43,7 @@ def build_dataset(max_vocab_size):
     count[0][1] = unk_count
     reverse_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
 
-    return data, count, dictionary, reverse_dictionary, vocab_size
+    return data, count, dictionary, reverse_dictionary
 
 
 def gen_batches(data, batch_size, seq_length):

@@ -7,4 +7,4 @@ eta=2e-3
 grad_clip=5
 train_frac=0.8
 cell_type=LSTM
-max_vocab_size=20000
+vocab_size=1000

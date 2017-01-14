@@ -10,9 +10,9 @@ def load_model(file_path):
         d = pickle.load(f)
 
     net = Network(d['n_h_layers'], d['n_h_units'],
-                  1, d['cell_type'])
+                  1, d['cell_type'], d['vocab_size'])
 
-    return net, d['vocab_size'], d['vocab_dict'], d['reverse_vocab_dict']
+    return net, d['vocab_dict'], d['reverse_vocab_dict']
 
 
 def parse_args():
@@ -32,9 +32,9 @@ def parse_args():
 
 
 args = parse_args()
-net, vocab_size, vocab_dict, reverse_vocab_dict = load_model(args.info_file)
+net, vocab_dict, reverse_vocab_dict = load_model(args.info_file)
 
 with open(args.out_file, 'w') as f:
-    sample_text = net.sample(args.length, args.prime_text, vocab_size, vocab_dict,
+    sample_text = net.sample(args.length, args.prime_text, vocab_dict,
                              reverse_vocab_dict, args.ckpts_dir)
     f.write(sample_text)

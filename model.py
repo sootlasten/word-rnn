@@ -16,22 +16,18 @@ INFO_FILENAME = "info.pickle"
 class Network():
 
     def __init__(self, n_h_layers, n_h_units, seq_length,
-                 cell_type, max_vocab_size):
+                 cell_type, vocab_size):
         # network parameters
         self.n_h_layers = n_h_layers
         self.n_h_units = n_h_units
         self.seq_length = seq_length
         self.cell_type = cell_type
-
-        # data preprocessing
-        self.data, _, self.vocab_dict, self.reverse_vocab_dict, self.vocab_size = \
-            process_data.build_dataset(max_vocab_size)
+        self.vocab_size = vocab_size
 
         self.x, self.final_state, self.init_state, self.preds, \
         self.logits, self.saver = self._build_network()
 
-    def sample(self, n, prime_text, vocab_size, vocab_dict,
-               reverse_vocab_dict, checkpoint_dir):
+    def sample(self, n, prime_text, vocab_dict, reverse_vocab_dict, checkpoint_dir):
         """Sample from the model."""
         def get_words_ids(text):
             """Get words from prime text and convert them to word ids."""
@@ -51,7 +47,7 @@ class Network():
 
             # SAMPLE ...
             if not prime_text:  # if no prime text, choose a random word
-                prime_text = vocab_dict.keys()[np.random.randint(vocab_size)]
+                prime_text = vocab_dict.keys()[np.random.randint(self.vocab_size)]
 
             prime_text_ids = get_words_ids(prime_text)
 
@@ -84,11 +80,15 @@ class Network():
             return " ".join(map(str, words))
 
     def train(self, batch_size, eta, grad_clip, n_epochs, train_frac, checkpoint_dir):
-        self._print_model_info(batch_size, eta, grad_clip, n_epochs, train_frac)
+        # data preprocessing
+        data, _, vocab_dict, reverse_vocab_dict = \
+            process_data.build_dataset(self.vocab_size)
+
+        self._print_model_info(batch_size, eta, grad_clip, n_epochs, train_frac, len(data))
 
         # save model info (num hidden layers etc.) to a file
         info_path = os.path.join(checkpoint_dir, INFO_FILENAME)
-        self._save_info(info_path)
+        self._save_info(info_path, vocab_dict, reverse_vocab_dict)
 
         # build graph for training ...
         y = tf.placeholder(tf.int32, [None, self.seq_length], name='target')
@@ -108,7 +108,7 @@ class Network():
             sess.run(tf.global_variables_initializer())
 
             # do the actual training
-            tr_data, val_data = process_data.split_data(self.data, train_frac)
+            tr_data, val_data = process_data.split_data(data, train_frac)
             best_val_err, best_epoch_n = float('inf'), 0
 
             print("train data size:         %d" % len(tr_data))
@@ -206,15 +206,15 @@ class Network():
 
         return x, final_state, init_state, preds, logits, saver
 
-    def _save_info(self, file_path):
+    def _save_info(self, file_path, vocab_dict, reverse_vocab_dict):
         """Save info about model hyperparameters and training data stuff."""
         param_dict = {
             'n_h_layers': self.n_h_layers,
             'n_h_units': self.n_h_units,
             'cell_type': self.cell_type,
             'vocab_size': self.vocab_size,
-            'vocab_dict': self.vocab_dict,
-            'reverse_vocab_dict': self.reverse_vocab_dict}
+            'vocab_dict': vocab_dict,
+            'reverse_vocab_dict': reverse_vocab_dict}
 
         with open(file_path, 'wb') as f:
             pickle.dump(param_dict, f)
@@ -225,7 +225,8 @@ class Network():
         return np.sum([np.prod(var._variable._shape)
                        for var in tf.trainable_variables()])
 
-    def _print_model_info(self, batch_size, eta, grad_clip, n_epochs, train_frac):
+    def _print_model_info(self, batch_size, eta, grad_clip,
+                          n_epochs, train_frac, data_size):
         print("Model hyperparams and info:")
         print("---------------------------")
         print("n_h_layers:              %d" % self.n_h_layers)
@@ -240,7 +241,7 @@ class Network():
         print("n_epochs:                %d" % n_epochs)
         print("train_frac:              {:.2f}\n".format(train_frac))
 
-        print("data_size:               %d" % len(self.data))
+        print("data_size:               %d" % data_size)
         print("# of trainabe params:    %d" % Network._model_params_size())
         print("# of examples in batch:  %d\n" % (self.seq_length * batch_size))
 
