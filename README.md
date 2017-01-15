@@ -19,3 +19,5 @@ To sample from the model, the script `sample.py` must be run. This script also t
 for additional info). The only mandatory argument, though, is `--info_file`, which should point to the info files saved in 
 the training phase. By default, the sampled text is saved into `sample.txt`.
 
+### TODO
+1. when sampling, <UNK> and <EOS> should be dealt with
