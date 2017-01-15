@@ -11,7 +11,7 @@ To train the model, the script `train.py` must be run with the command `python t
 `params.txt` (by default) and runs the model from `model.py` with these parameters set. The input file is located in `data/input.txt` by default. 
 During training, after each epoch, the code prints some information about the performace of the model to standard output. It also saves 
 the checkpoint files (that contain weights and additional info needed to reload the model) to `ckpts/` (by default) after each epoch. Each checkpoint 
-file has a filename of the form `model_e[x].pickle`, where `x` specifies the epoch number. Furthermore, it saves some info about the model to 
+file can be later loaded with the name `model_e[x].ckpt`, where `x` specifies the epoch number. Furthermore, it saves some info about the model to 
 `ckpts/info.pickle` (by default), so the network can be rebuilt afterwards.
 
 ### Sampling
