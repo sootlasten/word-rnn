@@ -19,8 +19,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Sample from the network.')
     parser.add_argument('--info_file', help='Path to the file that contains '
                                              'the model information')
-    parser.add_argument('--ckpts_dir', help='Path to the directory '
-                                                  'checkpoints are saved to.',
+    parser.add_argument('--ckpt_path', help='Path to the checkpoint file that contains '
+                                            'network parameters (i.e. weights and biases)',
                         default='ckpts/')
     parser.add_argument('--prime_text', help='Text to feed the network with before sampling',
                         default=None)
@@ -36,5 +36,5 @@ net, vocab_dict, reverse_vocab_dict = load_model(args.info_file)
 
 with open(args.out_file, 'w') as f:
     sample_text = net.sample(args.length, args.prime_text, vocab_dict,
-                             reverse_vocab_dict, args.ckpts_dir)
+                             reverse_vocab_dict, args.ckpt_path)
     f.write(sample_text)

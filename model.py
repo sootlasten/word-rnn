@@ -9,7 +9,6 @@ import numpy as np
 
 import process_data
 
-CKPT_FILENAME = "model.ckpt"
 INFO_FILENAME = "info.pickle"
 
 
@@ -27,7 +26,7 @@ class Network():
         self.x, self.keep_prob, self.final_state, self.init_state, \
         self.preds, self.logits, self.saver = self._build_network()
 
-    def sample(self, n, prime_text, vocab_dict, reverse_vocab_dict, checkpoint_dir):
+    def sample(self, n, prime_text, vocab_dict, reverse_vocab_dict, ckpt_path):
         """Sample from the model."""
         def get_words_ids(text):
             """Get words from prime text and convert them to word ids."""
@@ -42,8 +41,7 @@ class Network():
             return word_ids
 
         with tf.Session() as sess:
-            params_path = os.path.join(checkpoint_dir, CKPT_FILENAME)
-            self.saver.restore(sess, params_path)  # restore model params
+            self.saver.restore(sess, ckpt_path)  # restore model params
 
             # SAMPLE ...
             if not prime_text:  # if no prime text, choose a random word
@@ -160,9 +158,9 @@ class Network():
                     best_val_err = total_val_err
                     best_epoch_n = epoch_n
 
-                    # save network parameters
-                    ckpt_path = os.path.join(checkpoint_dir, CKPT_FILENAME)
-                    self.saver.save(sess, ckpt_path)
+                # save network parameters
+                ckpt_path = os.path.join(checkpoint_dir, "model_e{}".format(epoch_n))
+                self.saver.save(sess, ckpt_path)
 
                 print("Epoch %d completed in %d seconds" % (epoch_n, time.time() - start_time))
                 print("Training loss:       %f" % total_tr_err)
