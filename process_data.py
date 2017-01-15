@@ -77,8 +77,8 @@ def gen_batches(data, batch_size, seq_length):
     y_list = data[1: end_idx]; y_list.append(data[0])  # last element is wrong!
     y = np.array(y_list).reshape((batch_size, -1))
 
-    x_batches = np.split(x, x.shape[1] / seq_length, 1)
-    y_batches = np.split(y, y.shape[1] / seq_length, 1)
+    x_batches = np.split(x, x.shape[1] // seq_length, 1)
+    y_batches = np.split(y, y.shape[1] // seq_length, 1)
 
     for x, y in zip(x_batches, y_batches):
         yield x, y
