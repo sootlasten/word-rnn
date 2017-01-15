@@ -159,7 +159,7 @@ class Network():
                     best_epoch_n = epoch_n
 
                 # save network parameters
-                ckpt_path = os.path.join(checkpoint_dir, "model_e{}".format(epoch_n))
+                ckpt_path = os.path.join(checkpoint_dir, "model_e{}.ckpt".format(epoch_n))
                 self.saver.save(sess, ckpt_path)
 
                 print("Epoch %d completed in %d seconds" % (epoch_n, time.time() - start_time))
@@ -250,19 +250,3 @@ class Network():
         print("data_size:               %d" % data_size)
         print("# of trainabe params:    %d" % Network._model_params_size())
         print("# of examples in batch:  %d\n" % (self.seq_length * batch_size))
-
-
-if __name__ == '__main__':
-    net = Network(
-        n_h_layers=3,
-        n_h_units=700,
-        seq_length=100,
-        cell_type='GRU')
-
-    net.train(
-        batch_size=30,
-        eta=2e-2,
-        grad_clip=5,
-        n_epochs=1000000000000,
-        train_frac=0.8,
-        checkpoint_dir='ckpts')
