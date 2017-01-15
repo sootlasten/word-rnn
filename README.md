@@ -20,4 +20,4 @@ for additional info). The only mandatory argument, though, is `--info_file`, whi
 the training phase. By default, the sampled text is saved into `sample.txt`.
 
 ### TODO
-1. when sampling, <UNK> and <EOS> should be dealt with
+1. when sampling, `<UNK>` and `<EOS>` should be dealt with
